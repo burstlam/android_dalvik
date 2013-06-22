@@ -2113,6 +2113,9 @@ static bool handleFmt21t(CompilationUnit *cUnit, MIR *mir, BasicBlock *bb,
     RegLocation rlSrc = dvmCompilerGetSrc(cUnit, mir, 0);
     rlSrc = loadValue(cUnit, rlSrc, kCoreReg);
 
+    opRegImm(cUnit, kOpCmp, rlSrc.lowReg, 0);
+
+//TUNING: break this out to allow use of Thumb2 CB[N]Z
     switch (dalvikOpcode) {
         case OP_IF_EQZ:
             cond = kArmCondEq;
@@ -2137,8 +2140,7 @@ static bool handleFmt21t(CompilationUnit *cUnit, MIR *mir, BasicBlock *bb,
             ALOGE("Unexpected opcode (%d) for Fmt21t", dalvikOpcode);
             dvmCompilerAbort(cUnit);
     }
-    ArmLIR* branch = genCmpImmBranch(cUnit, cond, rlSrc.lowReg, 0);
-    branch->generic.target = (LIR*)&labelList[bb->taken->id];
+    genConditionalBranch(cUnit, cond, &labelList[bb->taken->id]);
     /* This mostly likely will be optimized away in a later phase */
     genUnconditionalBranch(cUnit, &labelList[bb->fallThrough->id]);
     return false;
@@ -2257,7 +2259,10 @@ static bool handleEasyMultiply(CompilationUnit *cUnit,
     } else {
         // Reverse subtract: (src << (shift + 1)) - src.
         assert(powerOfTwoMinusOne);
-        genMultiplyByShiftAndReverseSubtract(cUnit, rlSrc, rlResult, lowestSetBit(lit + 1));
+        // TODO: rsb dst, src, src lsl#lowestSetBit(lit + 1)
+        int tReg = dvmCompilerAllocTemp(cUnit);
+        opRegRegImm(cUnit, kOpLsl, tReg, rlSrc.lowReg, lowestSetBit(lit + 1));
+        opRegRegReg(cUnit, kOpSub, rlResult.lowReg, tReg, rlSrc.lowReg);
     }
     storeValue(cUnit, rlDest, rlResult);
     return true;

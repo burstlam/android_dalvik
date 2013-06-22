@@ -624,15 +624,15 @@ static pid_t forkAndSpecializeCommon(const u4* args, bool isSystemServer)
             dvmAbort();
         }
 
-        err = setresgid(gid, gid, gid);
+        err = setgid(gid);
         if (err < 0) {
-            ALOGE("cannot setresgid(%d): %s", gid, strerror(errno));
+            ALOGE("cannot setgid(%d): %s", gid, strerror(errno));
             dvmAbort();
         }
 
-        err = setresuid(uid, uid, uid);
+        err = setuid(uid);
         if (err < 0) {
-            ALOGE("cannot setresuid(%d): %s", uid, strerror(errno));
+            ALOGE("cannot setuid(%d): %s", uid, strerror(errno));
             dvmAbort();
         }
 
